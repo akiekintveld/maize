@@ -1,0 +1,21 @@
+[package]
+name = "maize"
+version = "0.0.0"
+authors = ["Austin Kiekintveld <akiekintveld@icloud.com>"]
+edition = "2021"
+description = "An capability-based microkernel."
+repository = "https://github.com/akiekintveld/maize"
+license = "MIT"
+keywords = ["osdev", "kernel", "microkernel", "capability"]
+categories = ["embedded", "no-std"]
+publish = false
+
+[workspace]
+members = ["kernel", "root"]
+
+[profile.release]
+opt-level = "s"
+lto = false
+
+[lib]
+name = "maize"

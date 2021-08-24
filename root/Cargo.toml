@@ -1,0 +1,18 @@
+# cargo-features = ["per-package-target"]
+
+[package]
+name = "root"
+version = "0.0.0"
+edition = "2021"
+publish = false
+# TODO: once rust-lang/cargo#9451 is fixed we should move to separate custom target(s) for each workspace member
+# forced-target
+
+[features]
+default = ["qemu-virt"]
+qemu-virt = []
+
+[[bin]]
+name = "root"
+bench = false
+test = false
