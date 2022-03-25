@@ -116,7 +116,7 @@ impl ThreadCap {
 
         let sstatus: u64;
         unsafe {
-            asm!(
+            core::arch::asm!(
                 "csrr {sstatus}, sstatus",
                 sstatus = lateout(reg) sstatus,
             )
@@ -124,7 +124,7 @@ impl ThreadCap {
         debug_assert_eq!(sstatus & SSTATUS_SPP_MASK, 0x0);
 
         unsafe {
-            asm!(
+            core::arch::asm!(
                 // Stash our context pointer. We're forced to use the last
                 // register we restore to hold the context pointer, and then it
                 // will load over itself.
@@ -253,7 +253,7 @@ impl ThreadCap {
         }
 
         unsafe {
-            asm!(
+            core::arch::asm!(
                 "csrw stvec, {stvec}",
                 stvec = in(reg) supervisor_trap,
             )
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn supervisor_trap() -> ! {
         let stval: usize;
 
         unsafe {
-            asm!(
+            core::arch::asm!(
                 "csrr {scause}, scause",
                 "csrr {stval}, stval",
                 scause = lateout(reg) scause,
@@ -346,7 +346,7 @@ pub unsafe extern "C" fn supervisor_trap() -> ! {
     // SAFETY: We entered via a trap. See below for the reasoning behind each
     // block of instructions.
     unsafe {
-        asm!(
+        core::arch::asm!(
             // Stash trap stack pointer.
             "csrw sscratch, sp",
 

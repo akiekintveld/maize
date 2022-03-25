@@ -42,7 +42,7 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
     // SAFETY: We entered via the SBI's boot sequence. See below for the
     // reasoning behind each block of instructions.
     unsafe {
-        asm!(
+        core::arch::asm!(
             // When entering supervisor mode via the SBI, it is guaranteed that
             // address translation and protection (ATP) are disabled; and that
             // interrupts will not be taken. The code model is medium so

@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(
-    asm,
     asm_sym,
     asm_const,
     fn_align,

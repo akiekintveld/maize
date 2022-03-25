@@ -9,7 +9,7 @@ unsafe extern "C" fn entry() -> ! {
     }
 
     unsafe {
-        asm!(
+        core::arch::asm!(
             // The initial register state is satp = 0, sstatus.SIE = 0,
             // a0 = hartid, and a1 = a pointer to the FDT.
 

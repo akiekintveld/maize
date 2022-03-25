@@ -30,7 +30,7 @@ pub unsafe fn call(
     let mut error: isize;
     let mut value;
     unsafe {
-        asm!(
+        core::arch::asm!(
             "ecall",
             in("a0") a0,
             in("a1") a1,

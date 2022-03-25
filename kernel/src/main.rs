@@ -2,7 +2,6 @@
 #![no_std]
 #![no_main]
 #![feature(
-    asm,
     asm_sym,
     asm_const,
     cfg_target_abi,
@@ -58,6 +57,8 @@ pub fn main() -> ! {
 
     kernel!("Hello, world!");
 
+    kernel!("Kernel layout: {:#?}", layout::KERNEL_LAYOUT);
+
     let ver = base::spec_version();
     kernel!("SBI specification version: {}", ver);
     assert!(ver.minor() >= 2);
@@ -87,8 +88,6 @@ pub fn main() -> ! {
 
     kernel!("Boot allocator has {} frames of memory.", boot_alloc.len());
 
-    const USERMODE_IMAGE: &'static [u8] = include_bytes!("../usermode_image");
-    const USERMODE_BASE_ADDR: usize = 0x4000_0000usize;
     const KERNELMODE_BASE_ADDR: usize = 0xffffffffc0000000;
     const KERNELMODE_BASE_PHYS: usize = 0x0000000080000000;
 
@@ -119,6 +118,9 @@ pub fn main() -> ! {
     }
 
     unsafe { set_kernel_l1_table(kernel_l1_table, &mut token) };
+
+    const USERMODE_IMAGE: &'static [u8] = include_bytes!("../usermode_image");
+    const USERMODE_BASE_ADDR: usize = 0x4000_0000usize;
 
     let l2_table = boot_alloc.alloc(|idx| L2TableCap::new(idx, &token));
     for (l2_index, l2_frame) in USERMODE_IMAGE
@@ -151,8 +153,6 @@ pub fn main() -> ! {
 
     kernel!("Boot allocator has {} frames of memory.", boot_alloc.len());
 
-    kernel!("Kernel layout: {:#?}", layout::KERNEL_LAYOUT);
-
     let thread = boot_alloc.alloc(|frame_number| {
         ThreadCap::new(
             frame_number,
@@ -169,7 +169,7 @@ pub fn main() -> ! {
         let scause: u64;
         let stval: u64;
         unsafe {
-            asm!(
+            core::arch::asm!(
                 "csrr {}, scause",
                 "csrr {}, stval",
                 lateout(reg) scause,

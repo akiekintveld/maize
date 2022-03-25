@@ -137,7 +137,7 @@ impl L2TableCap {
             const SATP_MODE_SV39: u64 = 0x8000_0000_0000_0000u64;
             satp |= SATP_MODE_SV39;
             unsafe {
-                asm!(
+                core::arch::asm!(
                     "csrrw {satp}, satp, {satp}",
                     "sfence.vma zero, zero",
                     satp = inout(reg) satp,
@@ -152,7 +152,7 @@ impl L2TableCap {
             const SATP_MODE_SV39: u64 = 0x8000_0000_0000_0000u64;
             satp |= SATP_MODE_SV39;
             unsafe {
-                asm!(
+                core::arch::asm!(
                     "csrw satp, {satp}",
                     "sfence.vma zero, zero",
                     satp = in(reg) satp,

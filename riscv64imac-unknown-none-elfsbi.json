@@ -21,7 +21,6 @@
   "frame-pointer": "always",
   "static-position-independent-executables": true,
   "allow-asm": true,
-  "has-elf-tls": true,
   "max-atomic-width": 64,
   "panic-strategy": "abort",
   "stack-probes": {
