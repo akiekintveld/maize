@@ -40,6 +40,7 @@ pub mod page;
 pub mod panic;
 pub mod ptr;
 pub mod sbi;
+pub mod plat;
 pub mod sync;
 pub mod table;
 pub mod thread;
@@ -88,6 +89,7 @@ pub fn main() -> ! {
 
     kernel!("Boot allocator has {} frames of memory.", boot_alloc.len());
 
+    //                                  0xffffffc000000000
     const KERNELMODE_BASE_ADDR: usize = 0xffffffffc0000000;
     const KERNELMODE_BASE_PHYS: usize = 0x0000000080000000;
 
@@ -165,17 +167,9 @@ pub fn main() -> ! {
     });
 
     loop {
-        token = thread.resume(token).unwrap();
-        let scause: u64;
-        let stval: u64;
-        unsafe {
-            core::arch::asm!(
-                "csrr {}, scause",
-                "csrr {}, stval",
-                lateout(reg) scause,
-                lateout(reg) stval,
-            )
-        };
+        let scause;
+        let stval;
+        (token, scause, stval) = thread.resume(token).unwrap();
 
         // TODO: define a new hart-local capability(s) that will allow a thread to
         // block waiting on timer or device interrupts, switch to other threads, extend

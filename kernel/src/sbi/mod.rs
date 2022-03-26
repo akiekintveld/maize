@@ -27,24 +27,8 @@ pub unsafe fn call(
     a4: usize,
     a5: usize,
 ) -> Result<usize, StandardError> {
-    let mut error: isize;
-    let mut value;
-    unsafe {
-        core::arch::asm!(
-            "ecall",
-            in("a0") a0,
-            in("a1") a1,
-            in("a2") a2,
-            in("a3") a3,
-            in("a4") a4,
-            in("a5") a5,
-            in("a6") fid,
-            in("a7") eid,
-            lateout("a0") error,
-            lateout("a1") value,
-        );
-    }
-    match error {
+    let (error, value) = unsafe { crate::plat::call(eid, fid, a0, a1, a2, a3, a4, a5) };
+    match error as isize {
         0 => Ok(value),
         -1 => Err(StandardError::Failed),
         -2 => Err(StandardError::NotSupported),

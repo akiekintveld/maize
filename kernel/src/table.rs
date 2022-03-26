@@ -136,13 +136,7 @@ impl L2TableCap {
             satp |= self.entries.into_raw().into_raw() as u64;
             const SATP_MODE_SV39: u64 = 0x8000_0000_0000_0000u64;
             satp |= SATP_MODE_SV39;
-            unsafe {
-                core::arch::asm!(
-                    "csrrw {satp}, satp, {satp}",
-                    "sfence.vma zero, zero",
-                    satp = inout(reg) satp,
-                )
-            }
+            satp = unsafe { crate::plat::swap_satp(satp) };
             let entries: Arc<TokenCell<[L2Entry; TABLE_LEN]>> =
                 unsafe { Arc::from_raw(Idx::from_raw((satp & !SATP_MODE_SV39) as usize).unwrap()) };
             drop(entries);
@@ -151,13 +145,7 @@ impl L2TableCap {
             satp |= self.entries.into_raw().into_raw() as u64;
             const SATP_MODE_SV39: u64 = 0x8000_0000_0000_0000u64;
             satp |= SATP_MODE_SV39;
-            unsafe {
-                core::arch::asm!(
-                    "csrw satp, {satp}",
-                    "sfence.vma zero, zero",
-                    satp = in(reg) satp,
-                )
-            }
+            unsafe { crate::plat::set_satp(satp) };
         }
     }
 
