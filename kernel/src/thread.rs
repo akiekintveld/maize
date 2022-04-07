@@ -177,7 +177,7 @@ struct CallStack {
 pub const SSTATUS_SPP_MASK: u64 = 0x100u64;
 
 /// General purpose register context for a hart.
-#[repr(C, align(16))]
+#[repr(C)]
 #[derive(Clone, Default)]
 pub struct Context {
     pub ra: usize,

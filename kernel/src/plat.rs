@@ -206,7 +206,7 @@ pub unsafe fn call(
 }
 
 use crate::{
-    align::L2FrameAligned,
+    align::L0FrameAligned,
     layout::{
         BOOT_STACK_POINTER, BOOT_THREAD_POINTER, ENTRY_START, GLOBAL_POINTER, THREAD_BSS_END,
         THREAD_BSS_START, THREAD_DATA_END, THREAD_DATA_START,
@@ -234,7 +234,7 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
 
     /// A L2 page table with nothing except the kernel (high half) mapped. This
     /// is only used during boot before we bootstrap the initial context.
-    static BOOT_L2_TABLE: L2FrameAligned<[L2Entry; TABLE_LEN]> = L2FrameAligned(boot_l2_table());
+    static BOOT_L2_TABLE: L0FrameAligned<[L2Entry; TABLE_LEN]> = L0FrameAligned(boot_l2_table());
 
     // SAFETY: We entered via the SBI's boot sequence. See below for the
     // reasoning behind each block of instructions.
@@ -397,7 +397,8 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
 /// # Safety
 /// Must be called by a trap from supervisor mode.
 #[naked]
-#[repr(align(0x4))]
+// Align to 4 byte boundary because low 2 bits of stvec are used for the vectoring mode.
+#[repr(align(4))]
 pub unsafe extern "C" fn supervisor_trap() -> ! {
     unsafe extern "C" fn handle_supervisor_trap(context: &crate::thread::Context) -> ! {
         let scause: usize;
