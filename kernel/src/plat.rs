@@ -2,7 +2,7 @@ use ::core::{arch::asm, mem::size_of};
 
 pub unsafe fn swap_satp(mut satp: u64) -> u64 {
     unsafe {
-        core::arch::asm!(
+        asm!(
             "csrrw {satp}, satp, {satp}",
             "sfence.vma zero, zero",
             satp = inout(reg) satp,
@@ -13,7 +13,7 @@ pub unsafe fn swap_satp(mut satp: u64) -> u64 {
 
 pub unsafe fn set_satp(satp: u64) {
     unsafe {
-        core::arch::asm!(
+        asm!(
             "csrw satp, {satp}",
             "sfence.vma zero, zero",
             satp = in(reg) satp,
@@ -24,7 +24,7 @@ pub unsafe fn set_satp(satp: u64) {
 pub unsafe fn resume(context: &mut crate::thread::Context) -> (u64, u64) {
     let sstatus: u64;
     unsafe {
-        core::arch::asm!(
+        asm!(
             "csrr {sstatus}, sstatus",
             sstatus = lateout(reg) sstatus,
         )
@@ -32,7 +32,7 @@ pub unsafe fn resume(context: &mut crate::thread::Context) -> (u64, u64) {
     debug_assert_eq!(sstatus & SSTATUS_SPP_MASK, 0x0);
 
     unsafe {
-        core::arch::asm!(
+        asm!(
             // Stash our context pointer. We're forced to use the last
             // register we restore to hold the context pointer, and then it
             // will load over itself.
@@ -163,7 +163,7 @@ pub unsafe fn resume(context: &mut crate::thread::Context) -> (u64, u64) {
     let scause: u64;
     let stval: u64;
     unsafe {
-        core::arch::asm!(
+        asm!(
             "csrw stvec, {stvec}",
             "csrr {scause}, scause",
             "csrr {stval}, stval",
@@ -188,7 +188,7 @@ pub unsafe fn call(
     let mut error: usize;
     let mut value: usize;
     unsafe {
-        core::arch::asm!(
+        asm!(
             "ecall",
             in("a0") a0,
             in("a1") a1,
@@ -239,7 +239,7 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
     // SAFETY: We entered via the SBI's boot sequence. See below for the
     // reasoning behind each block of instructions.
     unsafe {
-        core::arch::asm!(
+        asm!(
             // When entering supervisor mode via the SBI, it is guaranteed that
             // address translation and protection (ATP) are disabled; and that
             // interrupts will not be taken. The code model is medium so
@@ -409,7 +409,7 @@ pub unsafe extern "C" fn supervisor_trap() -> ! {
         let stval: usize;
 
         unsafe {
-            core::arch::asm!(
+            asm!(
                 "csrr {scause}, scause",
                 "csrr {stval}, stval",
                 scause = lateout(reg) scause,
@@ -426,7 +426,7 @@ pub unsafe extern "C" fn supervisor_trap() -> ! {
     // SAFETY: We entered via a trap. See below for the reasoning behind each
     // block of instructions.
     unsafe {
-        core::arch::asm!(
+        asm!(
             // Stash trap stack pointer.
             "csrw sscratch, sp",
 

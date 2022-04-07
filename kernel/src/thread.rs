@@ -1,6 +1,6 @@
 use {
     crate::{
-        frame::{Arc, Idx},
+        frame::{NormalArc, Idx},
         sync::{Token, TokenCell},
         table::L2TableCap,
     },
@@ -14,7 +14,7 @@ impl CallCap {
     pub fn new(frame_number: Idx, pc: usize, sp: usize, l2_table: L2TableCap) -> Option<Self> {
         let call = Call { pc, sp, l2_table };
         let call = TokenCell::new(call);
-        let call = Arc::new(frame_number, call)?;
+        let call = NormalArc::new(frame_number, call)?;
         Some(Self { call })
     }
 
@@ -25,7 +25,7 @@ impl CallCap {
 
 #[derive(Clone)]
 pub struct CallCap {
-    call: Arc<TokenCell<Call>>,
+    call: NormalArc<TokenCell<Call>>,
 }
 
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl ThreadCap {
             exception_call: None,
         };
         let thread = TokenCell::new(thread);
-        let thread = Arc::new(frame_number, thread)?;
+        let thread = NormalArc::new(frame_number, thread)?;
         Some(Self { thread })
     }
 
@@ -130,7 +130,7 @@ impl ThreadCap {
 
 #[derive(Clone)]
 pub struct ThreadCap {
-    thread: Arc<TokenCell<Thread>>,
+    thread: NormalArc<TokenCell<Thread>>,
 }
 
 struct Thread {

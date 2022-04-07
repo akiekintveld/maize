@@ -8,15 +8,20 @@
     naked_functions,
     thread_local,
     const_eval_limit,
-    strict_provenance,
+    strict_provenance
 )]
-#![deny(absolute_paths_not_starting_with_crate, fuzzy_provenance_casts, lossy_provenance_casts, unsafe_op_in_unsafe_fn)]
+#![deny(
+    absolute_paths_not_starting_with_crate,
+    fuzzy_provenance_casts,
+    lossy_provenance_casts,
+    unsafe_op_in_unsafe_fn
+)]
 #![const_eval_limit = "4294967296"]
 
 use static_assertions as _;
 
 use crate::{
-    frame::{Idx, FREE_FRAMES_START},
+    frame::Idx,
     layout::KERNEL_LAYOUT,
     machine::{FRAME_COUNT, L0_FRAME_SIZE, L1_FRAME_SIZE},
     sbi::srst::{reset_system, Reason, Type},
@@ -38,22 +43,38 @@ pub mod layout;
 pub mod machine;
 pub mod page;
 pub mod panic;
+pub mod plat;
 pub mod ptr;
 pub mod sbi;
-pub mod plat;
 pub mod sync;
 pub mod table;
 pub mod thread;
 
 pub fn main(frame_mapping_addr: *mut ()) -> ! {
     use crate::{
-        page::L0PageCap,
+        page::{InternalPageCap, NormalPageCap},
         sbi::{base, legacy, srst},
         sync::Token,
         table::{L0TableCap, L1TableCap, L2TableCap},
         thread::{Context, ThreadCap},
     };
-    frame::set_frame_mapping_addr(frame_mapping_addr);
+
+    unsafe { frame::set_frame_mapping_addr(frame_mapping_addr) };
+
+    pub const DEVICE_START: usize = 0x0;
+    pub const DEVICE_END: usize = 0x8_0000;
+    pub const NORMAL_START: usize = 0xc_0000;
+    pub const NORMAL_END: usize = FRAME_COUNT;
+
+    for idx in DEVICE_START..DEVICE_END {
+        let idx = Idx::from_raw(idx).unwrap();
+        unsafe { frame::mark_device(idx) };
+    }
+
+    for idx in NORMAL_START..NORMAL_END {
+        let idx = Idx::from_raw(idx).unwrap();
+        unsafe { frame::mark_normal(idx) };
+    }
 
     let mut token = Token::acquire();
 
@@ -86,7 +107,7 @@ pub fn main(frame_mapping_addr: *mut ()) -> ! {
     let mimpl_id = base::machine_impl_id();
     kernel!("SBI machine implementation ID: {:#x}", mimpl_id);
 
-    let mut boot_alloc = BootAlloc::new(FREE_FRAMES_START, FRAME_COUNT);
+    let mut boot_alloc = BootAlloc::new(NORMAL_START, NORMAL_END);
 
     kernel!("Boot allocator has {} frames of memory.", boot_alloc.len());
 
@@ -104,7 +125,7 @@ pub fn main(frame_mapping_addr: *mut ()) -> ! {
                     let phys_addr =
                         l0_index * L0_FRAME_SIZE + l1_index * L1_FRAME_SIZE + KERNELMODE_BASE_PHYS;
                     let idx = Idx::from_raw(phys_addr / L0_FRAME_SIZE).unwrap();
-                    let l0_page = unsafe { L0PageCap::already_init(idx) }.unwrap();
+                    let l0_page = unsafe { InternalPageCap::assume_init(idx) }.unwrap();
                     unsafe {
                         l0_table.map_l0_kernel_page(
                             &mut token,
@@ -138,7 +159,7 @@ pub fn main(frame_mapping_addr: *mut ()) -> ! {
                 let mut bytes = [0x0; crate::machine::L0_FRAME_SIZE];
                 bytes[..l0_frame.len()].copy_from_slice(l0_frame);
                 kernel!("Copying {} bytes into a l0 page.", l0_frame.len());
-                let l0_page = boot_alloc.alloc(|idx| L0PageCap::new(idx, bytes));
+                let l0_page = boot_alloc.alloc(|idx| NormalPageCap::new(idx, bytes));
                 kernel!("Mapping that l0 page at l0 index {}.", l0_index);
                 l0_table.map_l0_page(
                     &mut token,

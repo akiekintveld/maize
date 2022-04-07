@@ -85,6 +85,25 @@ impl<T> TokenCell<T> {
     }
 }
 
+impl<T> RacyCell<T> {
+    /// Construct a new racy cell wrapping a `T`.
+    pub const fn new(t: T) -> Self {
+        Self(UnsafeCell::new(t))
+    }
+
+    /// Immutably borrow the contents of the racy cell.
+    pub unsafe fn borrow(&self) -> &T {
+        // SAFETY: The caller has ensured this borrow is legal.
+        unsafe { &*self.0.get() }
+    }
+
+    /// Mutably borrow the contents of the racy cell.
+    pub unsafe fn borrow_mut(&self) -> &mut T {
+        // SAFETY: The caller has ensured this borrow is legal.
+        unsafe { &mut *self.0.get() }
+    }
+}
+
 /// A token confers permission to borrow the contents of a token cell.
 ///
 /// A token and its cells are used to separate borrowing permissions from
@@ -106,10 +125,18 @@ pub struct Token(());
 #[repr(transparent)]
 pub struct TokenCell<T>(UnsafeCell<T>);
 
+#[repr(transparent)]
+pub struct RacyCell<T>(UnsafeCell<T>);
+
 // SAFETY: A token cell is a transparent wrapper over a `T`. The token ensures
 // safety when borrowing.
 unsafe impl<T> Send for TokenCell<T> where T: Send {}
 unsafe impl<T> Sync for TokenCell<T> where T: Sync {}
+
+// SAFETY: A racy cell is a transparent wrapper over a `T`. The caller ensures
+// safety when borrowing.
+unsafe impl<T> Send for RacyCell<T> where T: Send {}
+unsafe impl<T> Sync for RacyCell<T> where T: Sync {}
 
 const INVALID_HART_ID: u64 = u64::MAX;
 static TOKEN_HOLDER: AtomicU64 = AtomicU64::new(INVALID_HART_ID);

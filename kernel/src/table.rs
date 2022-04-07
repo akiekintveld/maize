@@ -8,8 +8,8 @@
 
 use {
     crate::{
-        frame::{Arc, Idx},
-        page::L0PageCap,
+        frame::{Idx, NormalArc},
+        page::{InternalPageCap, NormalPageCap},
         sync::{Token, TokenCell},
         thread::{CallCap, ThreadCap},
     },
@@ -22,7 +22,7 @@ pub enum Cap {
     L2Table(L2TableCap),
     L1Table(L1TableCap),
     L0Table(L0TableCap),
-    L0Page(L0PageCap),
+    L0Page(InternalPageCap),
     Thread(ThreadCap),
     Call(CallCap),
 }
@@ -68,7 +68,7 @@ impl Cap {
 
 #[derive(Clone)]
 pub struct L2TableCap {
-    entries: Arc<TokenCell<[L2Entry; TABLE_LEN]>>,
+    entries: NormalArc<TokenCell<[L2Entry; TABLE_LEN]>>,
 }
 
 impl ::core::fmt::Debug for L2TableCap {
@@ -79,12 +79,12 @@ impl ::core::fmt::Debug for L2TableCap {
 
 #[derive(Clone)]
 pub struct L1TableCap {
-    entries: Arc<TokenCell<[L1Entry; TABLE_LEN]>>,
+    entries: NormalArc<TokenCell<[L1Entry; TABLE_LEN]>>,
 }
 
 #[derive(Clone)]
 pub struct L0TableCap {
-    entries: Arc<TokenCell<[L0Entry; TABLE_LEN]>>,
+    entries: NormalArc<TokenCell<[L0Entry; TABLE_LEN]>>,
 }
 
 pub const fn boot_l2_table() -> [L2Entry; TABLE_LEN] {
@@ -137,8 +137,9 @@ impl L2TableCap {
             const SATP_MODE_SV39: u64 = 0x8000_0000_0000_0000u64;
             satp |= SATP_MODE_SV39;
             satp = unsafe { crate::plat::swap_satp(satp) };
-            let entries: Arc<TokenCell<[L2Entry; TABLE_LEN]>> =
-                unsafe { Arc::from_raw(Idx::from_raw((satp & !SATP_MODE_SV39) as usize).unwrap()) };
+            let entries: NormalArc<TokenCell<[L2Entry; TABLE_LEN]>> = unsafe {
+                NormalArc::from_raw(Idx::from_raw((satp & !SATP_MODE_SV39) as usize).unwrap())
+            };
             drop(entries);
         } else {
             let mut satp = 0x0;
@@ -154,7 +155,7 @@ impl L2TableCap {
         let kernel_l1_table = KERNEL_L1_TABLE.borrow(&token);
         let kernel_l1_table = kernel_l1_table.clone().unwrap();
         l2_entries[TABLE_LEN - 1] = L2Entry::kernel_interior(kernel_l1_table);
-        let entries = Arc::new(frame_number, TokenCell::new(l2_entries))?;
+        let entries = NormalArc::new(frame_number, TokenCell::new(l2_entries))?;
         Some(Self { entries })
     }
 
@@ -173,7 +174,7 @@ impl L2TableCap {
 impl L1TableCap {
     pub fn new(frame_number: Idx) -> Option<Self> {
         const INVALID_ENTRY: L1Entry = L1Entry::invalid();
-        let entries = Arc::new(frame_number, TokenCell::new([INVALID_ENTRY; TABLE_LEN]))?;
+        let entries = NormalArc::new(frame_number, TokenCell::new([INVALID_ENTRY; TABLE_LEN]))?;
         Some(Self { entries })
     }
 
@@ -195,7 +196,7 @@ impl L1TableCap {
 impl L0TableCap {
     pub fn new(frame_number: Idx) -> Option<Self> {
         const INVALID_ENTRY: L0Entry = L0Entry::invalid();
-        let entries = Arc::new(frame_number, TokenCell::new([INVALID_ENTRY; TABLE_LEN]))?;
+        let entries = NormalArc::new(frame_number, TokenCell::new([INVALID_ENTRY; TABLE_LEN]))?;
         Some(Self { entries })
     }
 
@@ -203,7 +204,7 @@ impl L0TableCap {
         &self,
         token: &mut Token,
         index: usize,
-        l0_page: L0PageCap,
+        l0_page: NormalPageCap,
         permissions: Permissions,
     ) {
         let entries = self.entries.borrow_mut(token);
@@ -214,7 +215,7 @@ impl L0TableCap {
         &self,
         token: &mut Token,
         index: usize,
-        l0_page: L0PageCap,
+        l0_page: InternalPageCap,
         permissions: Permissions,
     ) {
         let entries = self.entries.borrow_mut(token);
@@ -297,7 +298,7 @@ impl L1Entry {
 }
 
 impl L0Entry {
-    pub fn leaf(l0_page: L0PageCap, permissions: Permissions) -> Self {
+    pub fn leaf(l0_page: NormalPageCap, permissions: Permissions) -> Self {
         let frame_number = l0_page.into_frame_number().into_raw() as u64;
         const VALID: u64 = 0b1 << 0;
         let permissions = permissions.bits();
@@ -310,7 +311,7 @@ impl L0Entry {
         Self(VALID | permissions | USER | GLOBAL | ACCESSED | DIRTY | RSW | ppn)
     }
 
-    pub unsafe fn kernel_leaf(l0_page: L0PageCap, permissions: Permissions) -> Self {
+    pub unsafe fn kernel_leaf(l0_page: InternalPageCap, permissions: Permissions) -> Self {
         let frame_number = l0_page.into_frame_number().into_raw() as u64;
         const VALID: u64 = 0b1 << 0;
         let permissions = permissions.bits();
