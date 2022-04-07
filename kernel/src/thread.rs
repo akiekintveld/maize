@@ -6,7 +6,7 @@ use {
     },
     ::core::{
         fmt::{Debug, Formatter, Result as FmtResult},
-        mem::{size_of, MaybeUninit},
+        mem::MaybeUninit,
     },
 };
 

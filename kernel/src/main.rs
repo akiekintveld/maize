@@ -4,13 +4,13 @@
 #![feature(
     asm_sym,
     asm_const,
-    cfg_target_abi,
     fn_align,
     naked_functions,
     thread_local,
-    const_eval_limit
+    const_eval_limit,
+    strict_provenance,
 )]
-#![deny(absolute_paths_not_starting_with_crate, unsafe_op_in_unsafe_fn)]
+#![deny(absolute_paths_not_starting_with_crate, fuzzy_provenance_casts, lossy_provenance_casts, unsafe_op_in_unsafe_fn)]
 #![const_eval_limit = "4294967296"]
 
 use static_assertions as _;
@@ -45,7 +45,7 @@ pub mod sync;
 pub mod table;
 pub mod thread;
 
-pub fn main() -> ! {
+pub fn main(frame_mapping_addr: *mut ()) -> ! {
     use crate::{
         page::L0PageCap,
         sbi::{base, legacy, srst},
@@ -53,6 +53,7 @@ pub fn main() -> ! {
         table::{L0TableCap, L1TableCap, L2TableCap},
         thread::{Context, ThreadCap},
     };
+    frame::set_frame_mapping_addr(frame_mapping_addr);
 
     let mut token = Token::acquire();
 

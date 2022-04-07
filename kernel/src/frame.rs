@@ -19,8 +19,8 @@ use {
         mem::{align_of, size_of},
         ops::Deref,
         sync::atomic::{
-            AtomicU32,
             Ordering::{Acquire, Relaxed, Release},
+            {AtomicPtr, AtomicU32},
         },
     },
 };
@@ -124,10 +124,11 @@ impl<T> Arc<T> {
 
     fn frame(idx: Idx) -> (&'static AtomicU32, MaybeDangling<T>) {
         let ref_count = &REF_COUNTS[idx.into_raw()];
-        const FRAME_MAPPING_ADDR: usize = 0xffff_ffc0_0000_0000;
-        let addr = FRAME_MAPPING_ADDR + idx.into_raw() * L0_FRAME_SIZE;
-        let ptr = MaybeDangling::new(addr as _).unwrap();
-        (ref_count, ptr)
+        let frame_mapping_addr = FRAME_MAPPING_ADDR.load(Relaxed);
+        assert!(!frame_mapping_addr.is_null());
+        let addr = frame_mapping_addr.map_addr(|addr| { addr + idx.into_raw() * L0_FRAME_SIZE});
+        let ptr = MaybeDangling::new(addr).unwrap();
+        (ref_count, ptr.cast())
     }
 }
 
@@ -233,6 +234,11 @@ static REF_COUNTS: [AtomicU32; FRAME_COUNT] = {
     }
     ref_counts
 };
+static FRAME_MAPPING_ADDR: AtomicPtr<[u8; FRAME_COUNT]> = AtomicPtr::new(core::ptr::null_mut());
+
+pub fn set_frame_mapping_addr(addr: *mut ()) {
+    FRAME_MAPPING_ADDR.store(addr.cast(), Relaxed);
+}
 
 impl<T> AsRef<T> for Arc<T> {
     fn as_ref(&self) -> &T {

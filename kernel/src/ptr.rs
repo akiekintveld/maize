@@ -12,7 +12,7 @@ impl<T> MaybeDangling<T> {
 
     /// Create a `MaybeDangling<T>` from a pointer.
     pub fn new(t: *mut T) -> Option<Self> {
-        if t as usize & align_of::<T>() - 1 != 0 {
+        if t.addr() & align_of::<T>() - 1 != 0 {
             return None;
         }
         NonNull::new(t).map(Self)

@@ -225,11 +225,11 @@ use crate::{
 #[export_name = "__entry$"]
 #[link_section = ".entry"]
 pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
-    unsafe extern "C" fn handle_boot(hart_id: u64, _fdt: u64) -> ! {
+    unsafe extern "C" fn handle_boot(hart_id: u64, _fdt: u64, frame_mapping_addr: *mut ()) -> ! {
         // SAFETY: SBI ensures that the hart ID is unique and accurate.
         unsafe { set_hart_id(hart_id) };
 
-        main()
+        main(frame_mapping_addr)
     }
 
     /// A L2 page table with nothing except the kernel (high half) mapped. This
@@ -352,6 +352,8 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
             "j 4b",
             "5:",
 
+            "li a2, {frame_mapping_addr}",
+
             // At this point, we've done enough to safely enter Rust. We jump
             // to do some additional runtime setup, passing along the hart ID,
             // the physical address of the flattened device tree in the first
@@ -384,6 +386,8 @@ pub unsafe extern "C" fn boot(_hart_id: u64, _fdt: u64) -> ! {
 
             thread_bss_start = sym THREAD_BSS_START,
             thread_bss_end = sym THREAD_BSS_END,
+
+            frame_mapping_addr = const 0xffff_ffc0_0000_0000u64,
 
             handle_boot = sym handle_boot,
 
