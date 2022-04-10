@@ -15,7 +15,6 @@ use {
         fmt,
         marker::PhantomData,
         mem::forget,
-        mem::MaybeUninit,
         mem::{align_of, size_of},
         ops::Deref,
         sync::atomic::{
@@ -56,15 +55,27 @@ impl<T> Arc<T, NormalPolicy> {
             })
         }
     }
+
+    fn get(&self) -> &T {
+        let (frame_kind, ref_count, frame) = Self::frame(self.idx);
+        debug_assert_eq!(frame_kind, FrameKind::Normal);
+        debug_assert!(ref_count.load(Relaxed) > 1);
+        // SAFETY: There exist no mutable references to this frame because the
+        // reference count is at least one. Any shared references to the frame
+        // must share our pointee type since they must derive from the same
+        // original pointer. The frame's lifetime extends until the pointer is
+        // dropped.
+        unsafe { frame.as_ref() }
+    }
 }
 
-impl<T> Arc<T, InternalPolicy> {
+impl<T: Copy> Arc<T, InternalPolicy> {
     pub unsafe fn assume_init(idx: Idx) -> Option<Self> {
         unsafe { Self::new_with(idx, FrameKind::Internal, |_frame| {}) }
     }
 }
 
-impl<T> Arc<T, ExternalPolicy> {
+impl<T: Copy> Arc<T, ExternalPolicy> {
     pub unsafe fn assume_init(idx: Idx) -> Option<Self> {
         unsafe { Self::new_with(idx, FrameKind::External, |_frame| {}) }
     }
@@ -106,18 +117,6 @@ impl<T, Policy: sealed::ArcPolicy> Arc<T, Policy> {
             _t: PhantomData,
             _policy: PhantomData,
         })
-    }
-
-    fn get(&self) -> &T {
-        let (frame_kind, ref_count, frame) = Self::frame(self.idx);
-        debug_assert_eq!(frame_kind, FrameKind::Normal);
-        debug_assert!(ref_count.load(Relaxed) > 1);
-        // SAFETY: There exist no mutable references to this frame because the
-        // reference count is at least one. Any shared references to the frame
-        // must share our pointee type since they must derive from the same
-        // original pointer. The frame's lifetime extends until the pointer is
-        // dropped.
-        unsafe { frame.as_ref() }
     }
 
     fn frame(idx: Idx) -> (FrameKind, &'static AtomicU32, MaybeDangling<T>) {

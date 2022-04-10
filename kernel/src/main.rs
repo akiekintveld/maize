@@ -7,7 +7,6 @@
     fn_align,
     naked_functions,
     thread_local,
-    const_eval_limit,
     strict_provenance
 )]
 #![deny(
@@ -16,7 +15,6 @@
     lossy_provenance_casts,
     unsafe_op_in_unsafe_fn
 )]
-#![const_eval_limit = "4294967296"]
 
 use static_assertions as _;
 
@@ -121,7 +119,7 @@ pub fn main(frame_mapping_addr: *mut ()) -> ! {
         for l0_index in 0..TABLE_LEN {
             let addr = l0_index * L0_FRAME_SIZE + l1_index * L1_FRAME_SIZE + KERNELMODE_BASE_ADDR;
             for section in KERNEL_LAYOUT {
-                if (section.start as usize..section.end as usize).contains(&addr) {
+                if (section.start.addr()..section.end.addr()).contains(&addr) {
                     let phys_addr =
                         l0_index * L0_FRAME_SIZE + l1_index * L1_FRAME_SIZE + KERNELMODE_BASE_PHYS;
                     let idx = Idx::from_raw(phys_addr / L0_FRAME_SIZE).unwrap();
